@@ -19,7 +19,7 @@ import modules.globals
 import modules.metadata
 import modules.ui as ui
 from modules.processors.frame.core import get_frame_processors_modules
-from modules.utilities import has_image_extension, is_image, is_video, detect_fps, create_video, extract_frames, get_temp_frame_paths, restore_audio, create_temp, move_temp, clean_temp, normalize_output_path
+from modules.utilities import has_image_extension, is_image, is_video, detect_fps, create_video, extract_frames, frames_already_extracted, get_temp_frame_paths, restore_audio, create_temp, move_temp, clean_temp, normalize_output_path
 
 if 'ROCMExecutionProvider' in modules.globals.execution_providers:
     del torch
@@ -193,8 +193,11 @@ def start() -> None:
             destroy()
     update_status('Creating temp resources...')
     create_temp(modules.globals.target_path)
-    update_status('Extracting frames...')
-    extract_frames(modules.globals.target_path)
+    if frames_already_extracted(modules.globals.target_path):
+        update_status('Frames already extracted... using existing temp files')
+    else:
+        update_status('Extracting frames...')
+        extract_frames(modules.globals.target_path)
     temp_frame_paths = get_temp_frame_paths(modules.globals.target_path)
     for frame_processor in get_frame_processors_modules(modules.globals.frame_processors):
         update_status('Progressing...', frame_processor.NAME)
