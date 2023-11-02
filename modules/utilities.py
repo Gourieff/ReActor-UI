@@ -42,6 +42,32 @@ def detect_fps(target_path: str) -> float:
     return 30.0
 
 
+def calculate_frame_count(target_path: str) -> int:
+    # approximate (should be close) using packet counting which is fast
+    commands = ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-count_packets', '-show_entries', 'stream=nb_read_packets', '-of', 'csv=p=0']
+    commands.append(target_path)
+    default_big_number = 100000000
+    try:
+        count_bytes_string = subprocess.check_output(commands, stderr=subprocess.STDOUT)
+        count =  int(count_bytes_string)
+        return count
+    except Exception:
+        return default_big_number
+
+
+def frames_already_extracted(target_path: str) -> bool:
+    temp_directory_path = get_temp_directory_path(target_path)
+    # calculate expected number of frames in video
+    target_frame_count = calculate_frame_count(target_path)
+    # if files are already extracted (account for 3 sec disparity), don't extract again
+    frames_in_3_sec = detect_fps(target_path) * 3
+    # count files in temp_directory_path
+    temp_dir_file_count = len([f for f in os.listdir(temp_directory_path)])
+    if (target_frame_count - frames_in_3_sec) <= temp_dir_file_count <= (target_frame_count + frames_in_3_sec):
+        return True
+    return False
+
+
 def extract_frames(target_path: str) -> None:
     temp_directory_path = get_temp_directory_path(target_path)
     run_ffmpeg(['-i', target_path, '-pix_fmt', 'rgb24', os.path.join(temp_directory_path, '%04d.png')])
